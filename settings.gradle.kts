@@ -22,6 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "liste_de_contacts_v2"
+rootProject.name = "liste_de_contacts_v4"
 include(":app")
- 

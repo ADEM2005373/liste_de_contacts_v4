@@ -90,7 +90,7 @@ class DetailContactFragment : Fragment() {
             contact = viewModel.getContactById(contactId)?.copy()
         }
 
-        if (contact == null) {
+        if (contact == null && !isNewContact) {
             Toast.makeText(requireContext(), "Erreur : Contact non trouvé", Toast.LENGTH_SHORT).show()
             parentFragmentManager.popBackStack()
             return
@@ -129,7 +129,7 @@ class DetailContactFragment : Fragment() {
         }
 
         btnDelete.setOnClickListener {
-            if (!isNewContact) {
+            if (!isNewContact && contact != null) {
                 viewModel.deleteContact(contact!!.id)
                 parentFragmentManager.popBackStack()
             } else {
@@ -145,10 +145,10 @@ class DetailContactFragment : Fragment() {
             }
         }
 
-        etNom.setText(contact?.nom)
-        etPrenom.setText(contact?.prenom)
-        etTelephone.setText(contact?.telephone)
-        etEmail.setText(contact?.email)
+        etNom.setText(contact?.nom ?: "")
+        etPrenom.setText(contact?.prenom ?: "")
+        etTelephone.setText(contact?.telephone ?: "")
+        etEmail.setText(contact?.email ?: "")
         etLatitude.setText(contact?.latitude?.toString() ?: "")
         etLongitude.setText(contact?.longitude?.toString() ?: "")
 
@@ -203,34 +203,25 @@ class DetailContactFragment : Fragment() {
         }
         
         btnMap.setOnClickListener {
-            val latText = etLatitude.text.toString()
-            val lngText = etLongitude.text.toString()
-            val lat = latText.toDoubleOrNull()
-            val lng = lngText.toDoubleOrNull()
+            val latText = etLatitude.text.toString().trim()
+            val lngText = etLongitude.text.toString().trim()
             
-            if (lat == null || lng == null) {
-                Toast.makeText(requireContext(), "Coordonnées invalides ou absentes", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (lat < -90.0 || lat > 90.0) {
-                Toast.makeText(requireContext(), "Latitude doit être entre -90 et 90", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (lng < -180.0 || lng > 180.0) {
-                Toast.makeText(requireContext(), "Longitude doit être entre -180 et 180", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            // Default to Paris (48.8566, 2.3522) if coordinates are empty so the map always opens successfully
+            val lat = latText.toDoubleOrNull() ?: 48.8566
+            val lng = lngText.toDoubleOrNull() ?: 2.3522
+
+            contact?.let {
+                it.latitude = lat
+                it.longitude = lng
+                it.nom = etNom.text.toString().trim().ifEmpty { "Contact" }
             }
 
-            // Always update current working object before passing to next fragment to not lose them
-            contact?.latitude = lat
-            contact?.longitude = lng
-            
             val fragment = CarteContactFragment().apply {
                 arguments = Bundle().apply {
-                    putInt("contact_id", contact!!.id)
+                    putInt("contact_id", contact?.id ?: 1)
                     putDouble("latitude", lat)
                     putDouble("longitude", lng)
-                    putString("nom", contact!!.nom)
+                    putString("nom", "${contact?.prenom ?: ""} ${contact?.nom ?: "Contact"}".trim())
                 }
             }
             parentFragmentManager.beginTransaction()
@@ -287,19 +278,19 @@ class DetailContactFragment : Fragment() {
                     return@setOnClickListener
                 }
             }
-            
-            if ((lat != null && lng == null) || (lat == null && lng != null)) {
-                Toast.makeText(requireContext(), "Veuillez renseigner les deux coordonnées", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
 
-            contact?.nom = nom
-            contact?.prenom = prenom
-            contact?.telephone = phone
-            contact?.email = email
-            contact?.latitude = lat
-            contact?.longitude = lng
-            contact?.imageUri = currentImageUri
+            if (contact == null) {
+                val newId = viewModel.getNextId()
+                contact = Contact(newId, nom, prenom, phone, email, currentImageUri, lat, lng)
+            } else {
+                contact?.nom = nom
+                contact?.prenom = prenom
+                contact?.telephone = phone
+                contact?.email = email
+                contact?.latitude = lat
+                contact?.longitude = lng
+                contact?.imageUri = currentImageUri
+            }
 
             if (isNewContact) {
                 viewModel.addContact(contact!!)

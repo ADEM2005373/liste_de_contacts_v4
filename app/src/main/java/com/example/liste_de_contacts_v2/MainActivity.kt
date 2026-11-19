@@ -13,6 +13,11 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        // Ensure SQLite database is created and visible in Android Studio Database Inspector
+        try {
+            DatabaseHelper(this).readableDatabase.close()
+        } catch (_: Exception) {}
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fragment_container)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
